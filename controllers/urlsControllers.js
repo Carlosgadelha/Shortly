@@ -28,8 +28,28 @@ export async function getURL(req, res){
  
         const url = await database.query(`SELECT id, "shortUrl", url FROM urls WHERE id = $1`, [id]);
         if(!url.rows[0]) return res.sendStatus(404);
-        
+
         res.status(200).send(url.rows[0]);
+
+    }catch(err){
+
+        res.sendStatus(500);
+    }
+
+}
+
+export async function openShortUrl(req, res){
+
+    const { shortUrl } = req.params;
+
+    try{
+ 
+        const url = await database.query(`SELECT * FROM urls WHERE "shortUrl" = $1`, [shortUrl]);
+        if(!url.rows[0]) return res.sendStatus(404);
+
+        await database.query(`UPDATE urls SET visits = visits + 1 WHERE "shortUrl" = $1`, [shortUrl]);
+
+        res.redirect(url.rows[0].url);
 
     }catch(err){
 
