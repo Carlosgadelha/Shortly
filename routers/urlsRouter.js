@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { shortenURL } from '../controllers/urlsControllers.js';
+import { getURL, shortenURL } from '../controllers/urlsControllers.js';
 import { validateToken } from '../middlewares/authMidleware.js';
 
 const urlsRouter = new Router();
 
 urlsRouter.post('/urls/shorten', validateToken, shortenURL);
-// urlsRouter.get('/urls/:id', login );
+urlsRouter.get('/urls/:id', getURL);
 
 export default urlsRouter;

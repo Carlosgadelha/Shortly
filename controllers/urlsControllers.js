@@ -1,6 +1,4 @@
 import { nanoid } from 'nanoid'
-
-
 import database from "../dataBase.js";
 
 export async function shortenURL(req, res){
@@ -22,23 +20,19 @@ export async function shortenURL(req, res){
 
 }
 
-export async function login(req, res){
+export async function getURL(req, res){
 
-    const { email, password } = req.body;
+    const { id } = req.params;
 
     try{
-        const user = await database.query('SELECT * FROM users WHERE email = $1', [email]);
-        if(user && bcrypt.compareSync(password, user.rows[0].password)){
-            const token = uuidv4();
-            await database.query(`INSERT INTO sessions (token, "userId") VALUES ($1, $2)`, [token, user.rows[0].id]);
-            return res.status(200).send({token});
-        }
+ 
+        const url = await database.query(`SELECT id, "shortUrl", url FROM urls WHERE id = $1`, [id]);
+        if(!url.rows[0]) return res.sendStatus(404);
         
-        res.status(401).send("Usuário ou senha incorretos");
-
+        res.status(200).send(url.rows[0]);
 
     }catch(err){
-        console.log(err);
+
         res.sendStatus(500);
     }
 
