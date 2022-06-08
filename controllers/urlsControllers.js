@@ -57,3 +57,26 @@ export async function openShortUrl(req, res){
     }
 
 }
+
+export async function deleteURL(req, res){
+
+    const { id } = req.params;
+    const { session } = res.locals;
+
+    
+
+    try{
+ 
+        const url = await database.query(`SELECT "userId" FROM urls WHERE id = $1`, [id]);
+        if( url.rows[0].userId !== session.userId ) return res.sendStatus(401);
+    
+        await database.query(`DELETE FROM urls WHERE id = $1`, [id]);	
+        res.sendStatus(204);
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    }
+
+}
+
