@@ -47,3 +47,66 @@ export async function login(req, res){
     }
 
 }
+
+export async function getInfosUser(req, res){
+
+    const { id } = req.params;
+    const { session } = res.locals;
+
+    try{
+ 
+        const user = await database.query(`SELECT id FROM users WHERE id = $1`, [id]);
+        if( user.rows[0].id !== session.userId ) return res.sendStatus(401);
+    
+        const visitCount = await database.query(`   SELECT users.id, users.name, SUM(urls.visits) 
+                                                    FROM users 
+                                                    JOIN urls ON users.id = urls."userId"
+                                                    WHERE users.id = $1
+                                                    GROUP BY users.id`, [id]);
+
+        const infos = await database.query(`        SELECT urls.id, urls.url, urls."shortUrl", urls.visits
+                                                    FROM users 
+                                                    JOIN urls ON users.id = urls."userId"
+                                                    WHERE users.id = $1`, [id]);
+                       
+        res.status(200).send(
+            {
+                "id": visitCount.rows[0].id,
+                "name": visitCount.rows[0].name,
+                "visitCount": Number(visitCount.rows[0].sum) ,
+                "shortenedUrls": infos.rows
+            })                 
+
+    }catch(err){
+        console.log(err);
+        res.sendStatus(500);
+    }
+
+}
+
+export async function getRanking(req, res){
+
+
+    try{
+
+    
+        const rank = await database.query(`        SELECT
+                                                        users.id,
+                                                        users.name,
+                                                        COUNT(urls.id) AS "linksCount",
+                                                        SUM(urls.visits) AS "visitCount"
+                                                    FROM
+                                                        users
+                                                        JOIN urls ON users.id = urls."userId"
+                                                        
+                                                    GROUP BY users.id
+                                                    ORDER BY  "visitCount" DESC 
+                                                    LIMIT 10`);
+                       
+        res.status(200).send(rank.rows)                 
+
+    }catch(err){
+        res.sendStatus(500);
+    }
+
+}

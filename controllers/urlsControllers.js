@@ -63,8 +63,6 @@ export async function deleteURL(req, res){
     const { id } = req.params;
     const { session } = res.locals;
 
-    
-
     try{
  
         const url = await database.query(`SELECT "userId" FROM urls WHERE id = $1`, [id]);
