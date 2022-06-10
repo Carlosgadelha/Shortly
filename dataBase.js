@@ -5,7 +5,7 @@ dotenv.config()
 const { Pool } = pg;
 
 const database = new Pool({
-    connectionString: process.env.Database_URL,
+    connectionString: process.env.DATABASE_URL,
     sql:{
         rejectUnauthorized:false
     }
