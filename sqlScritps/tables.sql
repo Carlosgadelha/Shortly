@@ -24,12 +24,3 @@ CREATE TABLE "urls" (
     "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE "rank" (
-    "id" SERIAL PRIMARY KEY,
-    "urlId" INTEGER NOT NULL REFERENCES "urls"("id"),
-    "userId" INTEGER NOT NULL REFERENCES "users"("id"),
-    "linkCount" INTEGER NOT NULL DEFAULT 0,
-    "visitsCount" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
-);
-

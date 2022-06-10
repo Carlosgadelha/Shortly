@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
-import database from "../dataBase.js";
+import { urlsRepository } from '../repositories/urlsRepository.js';
+import { userRepository } from '../repositories/userRepository.js';
 
 export async function newUser(req, res){
 
@@ -11,15 +12,14 @@ export async function newUser(req, res){
 
     try{
 
-        const user = await database.query('SELECT * FROM users WHERE email = $1', [email]);
-        if(user.rows[0]) return res.sendStatus(409);
+        const user = await userRepository.getUserEmail(email);
+        if(user) return res.sendStatus(409);
 
-        await database.query(`INSERT INTO users (name, email, password) VALUES ($1, $2, $3)`, [name, email, bcrypt.hashSync(password,10)]);
+        await userRepository.newUser(name, email, bcrypt.hashSync(password, 10));
+
         res.sendStatus(201);
 
     }catch(err){
-
-        // if(err.code === "23505") return res.status(409).send("Email já cadastrado");
 
         res.sendStatus(500);
     }
@@ -31,18 +31,22 @@ export async function login(req, res){
     const { email, password } = req.body;
 
     try{
-        const user = await database.query('SELECT * FROM users WHERE email = $1', [email]);
-        if(user && bcrypt.compareSync(password, user.rows[0].password)){
+
+        const user = await userRepository.getUserEmail(email);
+        if(user && bcrypt.compareSync(password, user.password)){
+
             const token = uuidv4();
-            await database.query(`INSERT INTO sessions (token, "userId") VALUES ($1, $2)`, [token, user.rows[0].id]);
+
+            await userRepository.newSession(token, user.id);
             return res.status(200).send({token});
+            
         }
         
         res.status(401).send("Usuário ou senha incorretos");
 
 
     }catch(err){
-        console.log(err);
+
         res.sendStatus(500);
     }
 
@@ -55,30 +59,22 @@ export async function getInfosUser(req, res){
 
     try{
  
-        const user = await database.query(`SELECT id FROM users WHERE id = $1`, [id]);
-        if( user.rows[0].id !== session.userId ) return res.sendStatus(401);
+        const user = await userRepository.getUser(id);
+        if( user.id !== session.userId ) return res.sendStatus(401);
     
-        const visitCount = await database.query(`   SELECT users.id, users.name, SUM(urls.visits) 
-                                                    FROM users 
-                                                    JOIN urls ON users.id = urls."userId"
-                                                    WHERE users.id = $1
-                                                    GROUP BY users.id`, [id]);
-
-        const infos = await database.query(`        SELECT urls.id, urls.url, urls."shortUrl", urls.visits
-                                                    FROM users 
-                                                    JOIN urls ON users.id = urls."userId"
-                                                    WHERE users.id = $1`, [id]);
+        const visitCount = await urlsRepository.getTotalVisit(id);
+        const infos = await urlsRepository.getInfos(id);    
                        
         res.status(200).send(
             {
-                "id": visitCount.rows[0].id,
-                "name": visitCount.rows[0].name,
-                "visitCount": Number(visitCount.rows[0].sum) ,
-                "shortenedUrls": infos.rows
+                "id": visitCount.id,
+                "name": visitCount.name,
+                "visitCount": Number(visitCount.sum) ,
+                "shortenedUrls": infos
             })                 
 
     }catch(err){
-        console.log(err);
+        
         res.sendStatus(500);
     }
 
@@ -86,24 +82,10 @@ export async function getInfosUser(req, res){
 
 export async function getRanking(req, res){
 
-
     try{
 
-    
-        const rank = await database.query(`        SELECT
-                                                        users.id,
-                                                        users.name,
-                                                        COUNT(urls.id) AS "linksCount",
-                                                        SUM(urls.visits) AS "visitCount"
-                                                    FROM
-                                                        users
-                                                        JOIN urls ON users.id = urls."userId"
-                                                        
-                                                    GROUP BY users.id
-                                                    ORDER BY  "visitCount" DESC 
-                                                    LIMIT 10`);
-                       
-        res.status(200).send(rank.rows)                 
+        const rank = await urlsRepository.getRank();       
+        res.status(200).send(rank)                 
 
     }catch(err){
         res.sendStatus(500);

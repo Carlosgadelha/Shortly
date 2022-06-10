@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid'
 import database from "../dataBase.js";
+import { urlsRepository } from '../repositories/urlsRepository.js';
 
 export async function shortenURL(req, res){
 
@@ -10,7 +11,7 @@ export async function shortenURL(req, res){
         const { session } = res.locals;
         const shortUrl = nanoid()
 
-        await database.query(`INSERT INTO urls ("userId", url, "shortUrl") VALUES ($1, $2, $3)`, [session.userId, url, shortUrl]);
+        await urlsRepository.newShortenURL(session.userId, url, shortUrl);
         res.status(201).send({shortUrl});
 
     }catch(err){
@@ -26,10 +27,10 @@ export async function getURL(req, res){
 
     try{
  
-        const url = await database.query(`SELECT id, "shortUrl", url FROM urls WHERE id = $1`, [id]);
-        if(!url.rows[0]) return res.sendStatus(404);
+        const url = await urlsRepository.getUrl(id);
+        if(!url) return res.sendStatus(404);
 
-        res.status(200).send(url.rows[0]);
+        res.status(200).send(url);
 
     }catch(err){
 
@@ -44,15 +45,15 @@ export async function openShortUrl(req, res){
 
     try{
  
-        const url = await database.query(`SELECT * FROM urls WHERE "shortUrl" = $1`, [shortUrl]);
-        if(!url.rows[0]) return res.sendStatus(404);
+        const url = await urlsRepository.getShortenURL(shortUrl);
+        if(!url) return res.sendStatus(404);
 
-        await database.query(`UPDATE urls SET visits = visits + 1 WHERE "shortUrl" = $1`, [shortUrl]);
+        await urlsRepository.updateVisits(shortUrl);
 
-        res.redirect(url.rows[0].url);
+        res.redirect(url);
 
     }catch(err){
-
+    
         res.sendStatus(500);
     }
 
@@ -65,14 +66,14 @@ export async function deleteURL(req, res){
 
     try{
  
-        const url = await database.query(`SELECT "userId" FROM urls WHERE id = $1`, [id]);
-        if( url.rows[0].userId !== session.userId ) return res.sendStatus(401);
+        const url = await urlsRepository.getUrl(id);
+        if( url.userId !== session.userId ) return res.sendStatus(401);
     
-        await database.query(`DELETE FROM urls WHERE id = $1`, [id]);	
+        await urlsRepository.deleteUrl(id);
         res.sendStatus(204);
 
     }catch(err){
-        console.log(err);
+
         res.sendStatus(500);
     }
 
